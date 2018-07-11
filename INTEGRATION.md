@@ -257,7 +257,7 @@ See the end of [ste2007.h](https://github.com/spirilis/slsdk_1202/blob/master/no
 
 ## Our final display config
 
-Here's the whole Display section of MSP_EXP432E401Y.c with all the Sharp junk removed:
+Here's the whole Display section of MSP_EXP432E401Y.c with all the Sharp junk removed and Nokia1202 stuff added:
 
 ```c
 /*

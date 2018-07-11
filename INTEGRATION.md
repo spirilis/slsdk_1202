@@ -4,12 +4,15 @@ The nokia1202 library can be checked out somewhere on your computer and the `nok
 Example:
 
 Import "display" example for MSP432E4:
+
 ![CCSv8 importing the MSP432E4 Display example](https://raw.githubusercontent.com/spirilis/slsdk_1202/master/docs/ccsv8_msp432e4_display_example.png)
 
 Import the `nokia1202` folder into the project (Right-click > Import > Import...) then (General > File System) and Next:
+
 ![CCSv8 linking nokia1202 folder into project](https://raw.githubusercontent.com/spirilis/slsdk_1202/master/docs/ccsv8_import_nokia1202.png)
 
 CCSv8.1 has a very nice feature when you link code folders into your project - it will ask if you want to auto-add the folder to the compiler's Include search path.  Say yes.
+
 ![CCSv8 asking if you want to auto-add the linked path to your include search path](https://raw.githubusercontent.com/spirilis/slsdk_1202/master/docs/ccsv8_auto_adjust_includepath.png)
 
 If you're running a version of CCS that doesn't do this, please add it using (Right-click > Properties) then (Build > ARM Compiler > Include Options) and add the path to `nokia1202` to the "Add dir to #include search path (--include-path, -I)" section.
@@ -94,7 +97,7 @@ const DisplaySharp_HWAttrsV1 displaySharpHWattrs = {
 
 If you'd like, you can remove any of the `DisplaySharp` related stuff but it's not strictly necessary since those structs should be garbage-collected by the compiler since we have no references to the Sharp display in `Display_config[]`.
 
-However, we want to add our Nokia1202 config:
+However, we want to add our Nokia1202 config after that code:
 
 ```c
 #include <ste2007.h>
@@ -108,11 +111,12 @@ const DisplayNokia1202_HWAttrsV1 nokiaConfig = {
 DisplayNokia1202_Object nokiaBuffers;
 ```
 
-Note the references to `MSP_EXP432E401Y_SPI2`, `NOKIA1202_GPIO_CS` and `NOKIA1202_GPIO_BACKLIGHT_LED`.  These refer to other TI Drivers arrays in the <board>.c and <board>.h file, and configuration of these items is outside the scope of this document - please consult the SimpleLink Academy to learn how you add GPIOs to the `gpioPinConfigs[]` arrays, add entries to the board.h for the GPIOName enum (which positionally refers to members of the `gpioPinConfigs[]` array), and if the necessary SPI configuration isn't already there (on the pins where you need them) you will have to modify the SPI stuff.
+Note the references to `MSP_EXP432E401Y_SPI2`, `NOKIA1202_GPIO_CS` and `NOKIA1202_GPIO_BACKLIGHT_LED`.  These refer to other TI-Drivers config arrays in the MSP_EXP432E401Y.c and MSP_EXP432E401Y.h files (hereto referred to as "`board.c` and `board.h`"), and configuration of these items is outside the scope of this document - please consult the SimpleLink Academy to learn how you add GPIOs to the `gpioPinConfigs[]` arrays, add entries to the board.h for the GPIOName enum (which positionally refers to members of the `gpioPinConfigs[]` array), and if the necessary SPI configuration isn't already there (on the pins where you need them) you will have to modify the SPI stuff.
 
 For the MSP432E401Y SimpleLink Wired Ethernet microcontroller, we are using SSI2 (SPI bus#2), PC7 for the CS pin and PN2 for the backlight LED.
 
 Our stock `spiMSP432E4DMAHWAttrs` array is fine as the first entry refers to SSI2 on the correct pins, so we can use the first entry in the `MSP_EXP432E401Y_SPIName` enum:
+
 ```c
 /*!
  *  @def    MSP_EXP432E401Y_SPIName
@@ -127,6 +131,7 @@ typedef enum MSP_EXP432E401Y_SPIName {
 ```
 
 For the CS and Backlight pins, we have to add configuration to the end of `gpioPinConfigs[]` to accommodate them:
+
 ```c
 GPIO_PinConfig gpioPinConfigs[] = {
     /* Input pins */
@@ -160,7 +165,8 @@ GPIO_PinConfig gpioPinConfigs[] = {
 };
 ```
 
-For our `NOKIA1202_GPIO_`* references, we add these to the <board>.h file:
+For our `NOKIA1202_GPIO_`* references, we add these to the board.h file:
+
 ```c
 /*!
  *  @def    MSP_EXP432E401Y_GPIOName

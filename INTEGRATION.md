@@ -239,4 +239,18 @@ At this point, you should be able to build the firmware and the stock "display" 
 
 Default values are used for contrast, refresh rate, etc. but those should be reasonable.  If they are not, you will have to utilize the `Display_control()` feature in your firmware to adjust them.  `#include <ste2007.h>` first so you have the command macros for the various tunables that you can access via `Display_control()`.
 
-See the end of [ste2007.h](https://github.com/spirilis/slsdk_1202/blob/master/nokia1202/ste2007.h) for info on these tunables.
+See the end of [ste2007.h](https://github.com/spirilis/slsdk_1202/blob/master/nokia1202/ste2007.h) for info on these tunables.  Use them with `Display_control()` e.g.:
+
+```c
+    /* Check if the selected Display type was found and successfully opened */
+    if (hLcd) {
+        Display_printf(hLcd, 5, 3, "Hello LCD!");
+
+        uint8_t c = 8;
+        Display_control(hLcd, NOKIA1202_CMD_CONTRAST, &c);  // Set contrast level to 8 (out of 0-31)
+        c = 1;
+        Display_control(hLcd, NOKIA1202_CMD_BACKLIGHT, &c); // Switch backlight LED on (since c=1)
+
+        /* Wait a while so text can be viewed. */
+        sleep(3);
+```

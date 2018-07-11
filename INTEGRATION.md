@@ -21,11 +21,11 @@ If you're running a version of CCS that doesn't do this, please add it using (Ri
 
 The library is designed to integrate into the TI Display API within the TI-Drivers framework.
 
-To illustrate how this works, open the <board>.c file - MSP_EXP432E401Y.c in this case - and scroll to the "Display" section:
+To illustrate how this works, open the board-specific TI-Drivers config .c file - MSP_EXP432E401Y.c in this case - and scroll to the "Display" section:
 ![MSP_EXP432E401Y.c display section](https://raw.githubusercontent.com/spirilis/slsdk_1202/master/docs/msp432e4_board_dot_c_display_section.png)
 
-The stock Display_config[] for this lists the UART display and Sharp96 Memory LCD display.  Since we open displays in this example by "type", e.g. Display_open(Display_Type_LCD, NULL)
-we will want to remove the Sharp96 entry:
+The stock `Display_config[]` for this lists the UART display and Sharp96 Memory LCD display.  Since we open displays in this example by "type", e.g. `Display_open(Display_Type_LCD, NULL)`
+we will want to remove the Sharp96 entry (since our Nokia 1202 registers itself as an LCD just like the Sharp):
 
 ```c
 /*
@@ -59,7 +59,11 @@ const Display_Config Display_config[] = {
 Before we insert our nokia1202 driver entry into the `Display_config[]` array, we need to predefine the HWAttrs struct and Object struct which it uses for configuration & buffers/state.
 
 You'll see above this section where structs are defined for the Sharp96 and UART:
+
 ```c
+/*
+ *  ============================= Display =============================
+ */
 #include <ti/display/Display.h>
 #include <ti/display/DisplayUart.h>
 #include <ti/display/DisplaySharp.h>

@@ -254,3 +254,61 @@ See the end of [ste2007.h](https://github.com/spirilis/slsdk_1202/blob/master/no
         /* Wait a while so text can be viewed. */
         sleep(3);
 ```
+
+## Our final display config
+
+Here's the whole Display section of MSP_EXP432E401Y.c with all the Sharp junk removed:
+
+```c
+/*
+ *  ============================= Display =============================
+ */
+#include <ti/display/Display.h>
+#include <ti/display/DisplayUart.h>
+
+DisplayUart_Object displayUartObject;
+
+const DisplayUart_HWAttrs displayUartHWAttrs = {
+    .uartIdx = MSP_EXP432E401Y_UART0,
+    .baudRate = 115200,
+    .mutexTimeout = (unsigned int)(-1),
+    .strBuf = displayBuf,
+    .strBufLen = MAXPRINTLEN
+};
+
+#include <ste2007.h>
+const DisplayNokia1202_HWAttrsV1 nokiaConfig = {
+    .spiBus = MSP_EXP432E401Y_SPI2,
+    .csPin = NOKIA1202_GPIO_CS,
+    .backlightPin = NOKIA1202_GPIO_BACKLIGHT_LED,
+    .useBacklight = true
+};
+
+DisplayNokia1202_Object nokiaBuffers;
+
+#ifndef BOARD_DISPLAY_USE_UART
+#define BOARD_DISPLAY_USE_UART 1
+#endif
+#ifndef BOARD_DISPLAY_USE_UART_ANSI
+#define BOARD_DISPLAY_USE_UART_ANSI 0
+#endif
+
+const Display_Config Display_config[] = {
+    {
+#  if (BOARD_DISPLAY_USE_UART_ANSI)
+        .fxnTablePtr = &DisplayUartAnsi_fxnTable,
+#  else /* Default to minimal UART with no cursor placement */
+        .fxnTablePtr = &DisplayUartMin_fxnTable,
+#  endif
+        .object = &displayUartObject,
+        .hwAttrs = &displayUartHWAttrs
+    },
+    {
+        .fxnTablePtr = &DisplayNokia1202_FxnTable,
+        .object = &nokiaBuffers,
+        .hwAttrs = &nokiaConfig
+    },
+};
+
+const uint_least8_t Display_count = sizeof(Display_config) / sizeof(Display_Config);
+```

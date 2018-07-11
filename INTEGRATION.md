@@ -1,5 +1,13 @@
 # Integrating nokia1202 into SimpleLink SDK projects
 
+## Caveat with the Nokia 1202 LCD
+
+The Nokia 1202 LCD part is a cheap component which is easily integrated into electronics projects.  One caveat is it requires 9-bit SPI, because the D/C (data/control) line isn't broken out into a GPIO therefore it's implemented internally as the 9th bit of each SPI transaction.
+
+As a result, this library will only function on platforms where 9-bit SPI is supported, i.e. SPI_Params.dataSize can be 9.  The MSP432P4-series chips do not support this.  The MSP432E4-series chips, CC13XX and CC26XX do support this.  For now the MSP432P4 will silently fail as the SPI driver does not catch the use of 9-bit SPI and doesn't care, but the display won't function.
+
+## Importing the library
+
 The nokia1202 library can be checked out somewhere on your computer and the `nokia1202` folder "linked back" into your CCS project.
 
 Example:

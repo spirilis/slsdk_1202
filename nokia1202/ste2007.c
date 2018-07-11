@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
+#include <xdc/runtime/System.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/drivers/SPI.h>
 #include <ti/drivers/GPIO.h>
@@ -41,6 +42,7 @@
 
 //! @brief Internal driver FxnTable prototypes
 unsigned int ste2007_getType();
+int ste2007_control_mutexwrapped(Display_Handle, unsigned int, void *);
 int ste2007_control(Display_Handle, unsigned int, void *);
 void ste2007_close(Display_Handle);
 void ste2007_vprintf(Display_Handle, uint8_t, uint8_t, char *, va_list);
@@ -63,7 +65,7 @@ const Display_FxnTable DisplayNokia1202_FxnTable = {
     .clearLinesFxn = ste2007_clearLines,
     .vprintfFxn = ste2007_vprintf,
     .closeFxn = ste2007_close,
-    .controlFxn = ste2007_control,
+    .controlFxn = ste2007_control_mutexwrapped,
     .getTypeFxn = ste2007_getType
 };
 
@@ -146,6 +148,8 @@ Display_Handle ste2007_open(Display_Handle dpyH, Display_Params *params)
     // Init mutex
     o->mutex = SemaphoreP_createBinary(1);
     if (o->mutex == NULL) {
+        System_printf("SemaphoreP_createBinary failed!\n");
+        System_flush();
         return NULL;
     }
 
@@ -167,6 +171,7 @@ Display_Handle ste2007_open(Display_Handle dpyH, Display_Params *params)
     spiP.frameFormat = SPI_POL0_PHA0;  // Mode 0
     o->bus = SPI_open(h->spiBus, &spiP);
     if (o->bus == NULL) {
+        //SemaphoreP_post(o->mutex);
         return NULL;
     }
 
@@ -178,7 +183,10 @@ Display_Handle ste2007_open(Display_Handle dpyH, Display_Params *params)
     ste2007_issuecmd(dpyH, STE2007_CMD_SEGMENTDIR, 0, STE2007_MASK_SEGMENTDIR); // Lines start at the left
     ste2007_issuecmd(dpyH, STE2007_CMD_ELECTVOL, 16, STE2007_MASK_ELECTVOL); // Electronic volume set to 16
 
+    // Need to release the mutex since ste2007_clear() uses it
+    SemaphoreP_post(o->mutex);
     ste2007_clear(dpyH);
+    SemaphoreP_pend(o->mutex, SemaphoreP_WAIT_FOREVER);
 
     ste2007_issue_compoundcmd(dpyH, STE2007_CMD_REFRESHRATE, 3, STE2007_MASK_REFRESHRATE); // Refresh rate = 65Hz
     ste2007_issue_compoundcmd(dpyH, STE2007_CMD_CHARGEPUMP, 0, STE2007_MASK_CHARGEPUMP); // Charge Pump multiply factor = 5x
@@ -363,7 +371,10 @@ void ste2007_vprintf(Display_Handle dpyH, uint8_t line, uint8_t col, char *fmt, 
             ste2007_write(dpyH, dispStr, 16-col);
             ste2007_chipselect(dpyH, 1);
         } else if (o->lineClearMode == DISPLAY_CLEAR_BOTH) {
+            // Need to release the mutex because ste2007_clearLines() uses it
+            SemaphoreP_post(o->mutex);
             ste2007_clearLines(dpyH, line, line);
+            SemaphoreP_pend(o->mutex, SemaphoreP_WAIT_FOREVER);
         }
     }
 
@@ -390,6 +401,20 @@ unsigned int ste2007_getType()
     return Display_Type_LCD;
 }
 
+
+//! @brief Wrapper to avoid littering ste2007_control() with Semaphore_post's at every return
+int ste2007_control_mutexwrapped(Display_Handle dpyH, unsigned int cmd, void *arg)
+{
+    DisplayNokia1202_Object *o = dpyH->object;
+    int ret;
+
+    SemaphoreP_pend(o->mutex, SemaphoreP_WAIT_FOREVER);
+    ret = ste2007_control(dpyH, cmd, arg);
+    SemaphoreP_post(o->mutex);
+
+    return ret;
+}
+
 //! @brief Custom control of the display - Display_control() handler
 //! @details A list of custom command codes are found in ste2007.h with possible non-standard return values as well.
 //! @return Signed integer equal to DISPLAY_STATUS_SUCCESS, DISPLAY_STATUS_ERROR or a custom return value
@@ -397,19 +422,19 @@ int ste2007_control(Display_Handle dpyH, unsigned int cmd, void *arg)
 {
     uint8_t *u8ptr;
     const DisplayNokia1202_HWAttrsV1 *h = dpyH->hwAttrs;
-    DisplayNokia1202_Object *o = dpyH->object;
 
-    SemaphoreP_pend(o->mutex, SemaphoreP_WAIT_FOREVER);
+    /* Note: The display's mutex is in a pended state when this function runs, so if we need to run
+     * any mutex-dependent functions e.g. ste2007_clear(), we should grab the dpyH->object->mutex and post, followed
+     * by a pend after the mutex-dependent function completes.
+     */
 
     switch (cmd) {
         case NOKIA1202_CMD_CONTRAST:
             if (arg == (void *)0) {
-                SemaphoreP_post(o->mutex);
                 return DISPLAY_STATUS_ERROR;
             }
             u8ptr = (uint8_t *)arg;
             if (*u8ptr > 31) {
-                SemaphoreP_post(o->mutex);
                 return NOKIA1202_CONTRAST_OUT_OF_RANGE;
             }
             ste2007_contrast(dpyH, *u8ptr);
@@ -417,21 +442,17 @@ int ste2007_control(Display_Handle dpyH, unsigned int cmd, void *arg)
 
         case NOKIA1202_CMD_REFRESHRATE:
             if (arg == (void *)0) {
-                SemaphoreP_post(o->mutex);
                 return DISPLAY_STATUS_ERROR;
             }
             u8ptr = (uint8_t *)arg;
             if (*u8ptr != 65 && *u8ptr != 70 && *u8ptr != 75 && *u8ptr != 80) {
-                SemaphoreP_post(o->mutex);
                 return NOKIA1202_REFRESHRATE_INVALID;
             }
             ste2007_refreshrate(dpyH, *u8ptr);
-            SemaphoreP_post(o->mutex);
             return DISPLAY_STATUS_SUCCESS;
 
         case NOKIA1202_CMD_INVERT:
             if (arg == (void *)0) {
-                SemaphoreP_post(o->mutex);
                 return DISPLAY_STATUS_ERROR;
             }
             u8ptr = (uint8_t *)arg;
@@ -441,12 +462,10 @@ int ste2007_control(Display_Handle dpyH, unsigned int cmd, void *arg)
             } else {
                 ste2007_invert(dpyH, 0);
             }
-            SemaphoreP_post(o->mutex);
             return DISPLAY_STATUS_SUCCESS;
 
         case NOKIA1202_CMD_POWERSAVE:
             if (arg == (void *)0) {
-                SemaphoreP_post(o->mutex);
                 return DISPLAY_STATUS_ERROR;
             }
             u8ptr = (uint8_t *)arg;
@@ -456,18 +475,15 @@ int ste2007_control(Display_Handle dpyH, unsigned int cmd, void *arg)
             } else {
                 ste2007_powersave(dpyH, 0);
             }
-            SemaphoreP_post(o->mutex);
             return DISPLAY_STATUS_SUCCESS;
 
         case NOKIA1202_CMD_BACKLIGHT:
             if (arg == (void *)0) {
-                SemaphoreP_post(o->mutex);
                 return DISPLAY_STATUS_ERROR;
             }
             u8ptr = (uint8_t *)arg;
 
             if (!h->useBacklight) {
-                SemaphoreP_post(o->mutex);
                 return DISPLAY_STATUS_SUCCESS;  // Nothing to do here so just pretend all's good
             }
             if (*u8ptr) {
@@ -475,11 +491,9 @@ int ste2007_control(Display_Handle dpyH, unsigned int cmd, void *arg)
             } else {
                 GPIO_write(h->backlightPin, 0);
             }
-            SemaphoreP_post(o->mutex);
             return DISPLAY_STATUS_SUCCESS;
     }
 
-    SemaphoreP_post(o->mutex);
     return DISPLAY_STATUS_UNDEFINEDCMD;  // Command not found
 }
 

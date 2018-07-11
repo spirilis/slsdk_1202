@@ -1,4 +1,5 @@
 # Integrating nokia1202 into SimpleLink SDK projects
+
 The nokia1202 library can be checked out somewhere on your computer and the `nokia1202` folder "linked back" into your CCS project.
 
 Example:
@@ -265,8 +266,11 @@ Here's the whole Display section of MSP_EXP432E401Y.c with all the Sharp junk re
  */
 #include <ti/display/Display.h>
 #include <ti/display/DisplayUart.h>
+#define MAXPRINTLEN 1024
 
 DisplayUart_Object displayUartObject;
+
+static char displayBuf[MAXPRINTLEN];
 
 const DisplayUart_HWAttrs displayUartHWAttrs = {
     .uartIdx = MSP_EXP432E401Y_UART0,
@@ -312,3 +316,7 @@ const Display_Config Display_config[] = {
 
 const uint_least8_t Display_count = sizeof(Display_config) / sizeof(Display_Config);
 ```
+
+Stock "display" example running on my MSP-EXP432E401Y (note: the LaunchPad was a sample TI provided for feedback reasons)
+
+![MSP-EXP432E401Y with Nokia 1202 BoosterPack running TI-Drivers Display example](https://raw.githubusercontent.com/spirilis/slsdk_1202/master/docs/mspexp432e401y_with_nokia1202_boosterpack.jpg)

@@ -115,9 +115,9 @@ const DisplayNokia1202_HWAttrsV1 nokiaConfig = {
 DisplayNokia1202_Object nokiaBuffers;
 ```
 
-Note the references to `MSP_EXP432E401Y_SPI2`, `NOKIA1202_GPIO_CS` and `NOKIA1202_GPIO_BACKLIGHT_LED`.  These refer to other TI-Drivers config arrays in the MSP_EXP432E401Y.c and MSP_EXP432E401Y.h files (hereto referred to as "`board.c` and `board.h`"), and advanced discussion of how to configure these items is outside the scope of this document - please consult the SimpleLink Academy to learn how you add GPIOs to the `gpioPinConfigs[]` arrays, add entries to the board.h for the GPIOName enum (which positionally refers to members of the `gpioPinConfigs[]` array), and if the necessary SPI configuration isn't already there (on the pins where you need them) you will have to modify the SPI stuff.  That said, I'll show you my example of how I do it.
+Note the references to `MSP_EXP432E401Y_SPI2`, `NOKIA1202_GPIO_CS` and `NOKIA1202_GPIO_BACKLIGHT_LED`.  These refer to other TI-Drivers config arrays in the MSP_EXP432E401Y.c and MSP_EXP432E401Y.h files (hereto referred to as "`board.c` and `board.h`"), and advanced discussion of how to configure these items is outside the scope of this document - please consult the SimpleLink Academy to learn how you add GPIOs to the `gpioPinConfigs[]` array, add entries to the board.h for the GPIOName enum (which positionally refers to members of the `gpioPinConfigs[]` array), and if the necessary SPI configuration isn't already there (on the pins where you need them) you will have to modify the SPI stuff.  That said, I'll show you my example of how I do it.
 
-For the MSP432E401Y SimpleLink Wired Ethernet microcontroller, we are using SSI2 (SPI bus#2), PC7 for the CS pin and PN2 for the backlight LED.
+For the MSP432E401Y SimpleLink Wired Ethernet microcontroller, we are using SSI2 (SPI bus#2), PC7 (port C, pin#7) for the SPI Chip Select pin and PN2 (port N, pin#2) for the backlight LED.
 
 Our stock `spiMSP432E4DMAHWAttrs` array is fine as the first entry refers to SSI2 on the correct pins, so we can use the first entry in the `MSP_EXP432E401Y_SPIName` enum (from `board.h`):
 
@@ -199,7 +199,7 @@ typedef enum MSP_EXP432E401Y_GPIOName {
 } MSP_EXP432E401Y_GPIOName;
 ```
 
-Now that we have our GPIOs identified and SPI bus identified in our HWAttrs array, let's add these to `Display_config[]` to finalize everything:
+Now that we have our GPIOs identified and SPI bus identified in our HWAttrs struct, let's add these to `Display_config[]` to finalize everything:
 
 ```c
 /*
@@ -238,3 +238,5 @@ const Display_Config Display_config[] = {
 At this point, you should be able to build the firmware and the stock "display" example will open the Nokia 1202 display and start printing text.
 
 Default values are used for contrast, refresh rate, etc. but those should be reasonable.  If they are not, you will have to utilize the `Display_control()` feature in your firmware to adjust them.  `#include <ste2007.h>` first so you have the command macros for the various tunables that you can access via `Display_control()`.
+
+See the end of [ste2007.h](https://github.com/spirilis/slsdk_1202/blob/master/nokia1202/ste2007.h) for info on these tunables.
